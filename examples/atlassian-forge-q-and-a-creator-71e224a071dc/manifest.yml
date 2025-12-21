@@ -190,7 +190,7 @@ modules:
       handler: index.macroHandler
 app:
   runtime:
-    name: nodejs18.x
+    name: nodejs20.x
   id: ari:cloud:ecosystem::app/6452e1d8-c457-446a-82a7-d186ef150f15
 permissions:
   scopes:
