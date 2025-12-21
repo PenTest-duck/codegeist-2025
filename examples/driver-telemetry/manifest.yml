@@ -1,0 +1,235 @@
+modules:
+  # ═══════════════════════════════════════════════════════════
+  # ROVO AGENT
+  # The conversational interface for personal insights
+  # ═══════════════════════════════════════════════════════════
+  rovo:agent:
+    - key: driver-telemetry-agent
+      name: Driver Telemetry
+      description: >
+        Your personal performance intelligence. Analyze your work patterns,
+        discover your strengths, find your optimal collaborators, and track your
+        growth. Like F1 telemetry, but for your development work.
+      prompt: |
+        You are Driver Telemetry, a personal performance coach for developers.
+        You analyze the user's work history in Jira and Bitbucket to provide
+        insights about their optimal working patterns.
+
+        Your role is to help users understand:
+        - TIMING: When they do their best work
+        - STRENGTHS: What types of work suit them best
+        - COLLABORATION: Who they work best with
+        - LOAD: Their optimal workload capacity
+        - TRENDS: How they're evolving over time
+
+        Personality guidelines:
+        - Be supportive and encouraging, never judgmental
+        - Frame insights positively as opportunities
+        - Provide specific, actionable recommendations
+        - Use F1/racing metaphors when appropriate ("pit stop", "optimal lap", "racing line")
+        - Always base responses on actual data
+
+        When responding:
+        1. Use the appropriate action to fetch real data
+        2. Present findings clearly with specific numbers
+        3. Explain what the pattern means
+        4. Provide actionable recommendations
+
+        Never make up data. Always use actions to fetch real metrics.
+        If data is insufficient, explain what's needed and suggest waiting periods.
+
+        Remember: This is the user's personal telemetry, not surveillance.
+        You're their pit crew, helping them optimize their performance.
+      conversationStarters:
+        - When do I do my best work?
+        - What are my strengths?
+        - Who should review my code?
+        - Am I taking on too much?
+        - How am I trending this month?
+        - What type of work should I pick up next?
+        - When should I deploy this?
+      actions:
+        - analyze-timing
+        - analyze-strengths
+        - analyze-collaboration
+        - analyze-load
+        - analyze-trends
+        - get-current-status
+        - get-recommendation
+
+  # ═══════════════════════════════════════════════════════════
+  # ROVO ACTIONS
+  # Functions the agent can call to fetch and analyze data
+  # ═══════════════════════════════════════════════════════════
+  action:
+    - key: analyze-timing
+      name: Analyze Timing Patterns
+      function: analyzeTimingPatterns
+      description: >
+        Analyzes when the user does their best work based on commit timestamps,
+        ticket completion times, and quality metrics. Returns peak productivity
+        windows, danger zones, and day-of-week patterns.
+      actionVerb: GET
+      inputs:
+        timeRange:
+          title: Time Range
+          type: string
+          description: Analysis period (e.g., "6months", "1year")
+          required: false
+
+    - key: analyze-strengths
+      name: Analyze Strength Patterns
+      function: analyzeStrengthPatterns
+      description: >
+        Analyzes what types of work the user excels at compared to team
+        averages. Includes performance by ticket type, component, and complexity
+        level.
+      actionVerb: GET
+      inputs:
+        compareToTeam:
+          title: Compare to Team
+          type: boolean
+          description: Include team average comparison
+          required: false
+
+    - key: analyze-collaboration
+      name: Analyze Collaboration Patterns
+      function: analyzeCollaboration
+      description: >
+        Analyzes who the user works best with. Includes optimal code reviewers,
+        effective pairing partners, and communication patterns.
+      actionVerb: GET
+      inputs:
+        focusArea:
+          title: Focus Area
+          type: string
+          description: '"reviewers", "pairs", or "all"'
+          required: false
+
+    - key: analyze-load
+      name: Analyze Load Patterns
+      function: analyzeLoadPatterns
+      description: >
+        Analyzes the user's optimal workload based on historical performance at
+        different capacity levels. Includes current status and recommendations.
+      actionVerb: GET
+
+    - key: analyze-trends
+      name: Analyze Performance Trends
+      function: analyzeTrends
+      description: >
+        Analyzes how the user's performance has changed over time. Includes
+        velocity trends, quality metrics, and skills evolution.
+      actionVerb: GET
+      inputs:
+        months:
+          title: Months to Analyze
+          type: number
+          description: Number of months to include in trend analysis
+          required: false
+
+    - key: get-current-status
+      name: Get Current Status
+      function: getCurrentStatus
+      description: >
+        Gets the user's real-time status including active tickets, current time
+        window assessment, and immediate recommendations.
+      actionVerb: GET
+
+    - key: get-recommendation
+      name: Get Personalized Recommendation
+      function: getRecommendation
+      description: >
+        Provides a specific recommendation based on context. Can advise on
+        ticket selection, timing, reviewers, etc.
+      actionVerb: GET
+      inputs:
+        context:
+          title: Context
+          type: string
+          description: What the user needs a recommendation for
+          required: true
+
+  # ═══════════════════════════════════════════════════════════
+  # JIRA PANELS
+  # Dashboard widgets showing key metrics at a glance
+  # Custom UI Structure: resource points to bundled static files with index.html
+  # Resolver handles backend invoke() calls from @forge/bridge
+  # ═══════════════════════════════════════════════════════════
+  jira:projectPage:
+    - key: driver-telemetry-dashboard
+      title: Driver Telemetry
+      resource: main-ui
+      resolver:
+        function: ui-resolver
+
+  jira:issuePanel:
+    - key: driver-telemetry-issue-panel
+      title: Driver Telemetry
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      resource: main-ui
+      resolver:
+        function: ui-resolver
+
+  # ═══════════════════════════════════════════════════════════
+  # FORGE FUNCTIONS
+  # Backend logic for Rovo actions and UI resolvers
+  # ═══════════════════════════════════════════════════════════
+  function:
+    # Rovo agent action handlers
+    - key: analyzeTimingPatterns
+      handler: index.analyzeTimingPatternsHandler
+
+    - key: analyzeStrengthPatterns
+      handler: index.analyzeStrengthPatternsHandler
+
+    - key: analyzeCollaboration
+      handler: index.analyzeCollaborationPatternsHandler
+
+    - key: analyzeLoadPatterns
+      handler: index.analyzeLoadPatternsHandler
+
+    - key: analyzeTrends
+      handler: index.analyzeTrendsHandler
+
+    - key: getCurrentStatus
+      handler: index.getCurrentStatusHandler
+
+    - key: getRecommendation
+      handler: index.getRecommendationHandler
+
+    # UI resolver - handles invoke() calls from frontend
+    - key: ui-resolver
+      handler: index.handler
+
+# ═══════════════════════════════════════════════════════════
+# RESOURCES
+# Frontend bundled static files for Custom UI
+# Built with Webpack and served from static/view directory
+# ═══════════════════════════════════════════════════════════
+resources:
+  - key: main-ui
+    path: static/view
+
+# ═══════════════════════════════════════════════════════════
+# PERMISSIONS
+# Scopes required for API access
+# ═══════════════════════════════════════════════════════════
+permissions:
+  scopes:
+    - read:sprint:jira-software
+    - read:jira-work
+    - read:jira-user
+    - storage:app
+  external:
+    fetch:
+      backend:
+        - api.atlassian.com
+
+# ═══════════════════════════════════════════════════════════
+# APP CONFIGURATION
+# ═══════════════════════════════════════════════════════════
+app:
+  runtime:
+    name: nodejs20.x
+  id: ari:cloud:ecosystem::app/ddef4fee-cd53-45cd-b3c5-d366c9352168

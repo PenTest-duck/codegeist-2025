@@ -1,1 +1,2 @@
-# codegeist-2025
+# Atlassian Codegeist 2025
+
