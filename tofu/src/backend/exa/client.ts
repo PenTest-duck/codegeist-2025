@@ -247,7 +247,7 @@ Provide specific details with citations where available.`;
       "/research/v1",
       {
         instructions,
-        model: "exa-research", // Use standard model for faster results
+        model: "exa-research-fast", // Use standard model for faster results
       }
     );
 
@@ -257,7 +257,7 @@ Provide specific details with citations where available.`;
     // Step 2: Poll for completion with exponential backoff
     const maxAttempts = 30; // Maximum polling attempts
     const initialDelay = 2000; // Start with 2 second delay
-    const maxDelay = 10000; // Max 10 second delay
+    const maxDelay = 30000; // Max 30 second delay
     let delay = initialDelay;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
