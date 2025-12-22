@@ -1,0 +1,23 @@
+{
+  "name": "tofu",
+  "version": "1.2.3",
+  "description": "Rovo agent for Top-of-funnel enrichment",
+  "main": "index.js",
+  "private": true,
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@forge/api": "^6.4.2",
+    "@forge/bridge": "^5.10.1",
+    "@forge/kvs": "^1.2.4",
+    "@forge/react": "^11.9.0",
+    "@forge/resolver": "^1.7.1",
+    "@forge/sql": "^3.0.14",
+    "@forge/storage": "^2.0.3",
+    "react": "^19.2.3"
+  }
+}

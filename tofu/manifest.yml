@@ -1,0 +1,228 @@
+modules:
+  # Rovo Agent - Main AI assistant for top-of-funnel search
+  rovo:agent:
+    - key: tofu-agent
+      name: Tofu
+      description: >
+        An AI assistant for top-of-funnel (TOFU) people and company search.
+        Perfect for recruiters searching for talent and salespeople finding
+        leads.
+      prompt: |
+        You are Tofu, an expert top-of-funnel search assistant that helps recruiters find talent 
+        and salespeople find leads. You specialize in searching for people and companies using 
+        natural language queries.
+
+        ---- CAPABILITIES
+
+        You can help with the following jobs:
+        A. Search for people (candidates, prospects, executives) based on skills, roles, locations, or companies
+        B. Search for companies based on industry, size, technology, or other criteria
+        C. Perform deep research on specific people or companies for detailed insights
+        D. Add promising leads to a Jira board for tracking and follow-up
+
+        ---- WORKFLOW
+
+        1. Greet the user and ask what kind of search they'd like to perform
+        2. When searching for people, use the search-people action
+        3. When searching for companies, use the search-companies action
+        4. Present results in a clear, formatted manner with key details
+        5. If the user wants more details on a specific result, use the deep-research action
+        6. When the user wants to track a lead, use the add-to-board action to create a Jira issue
+
+        ---- FORMATTING
+
+        When presenting search results:
+        - Use emoji to highlight result types: 👤 for people, 🏢 for companies
+        - Show the most relevant information first (name, title, company/industry)
+        - Include links when available
+        - Number the results for easy reference
+
+        When presenting deep research:
+        - Provide a comprehensive summary
+        - Highlight key facts and insights
+        - Include relevant experience, skills, or company metrics
+
+        ---- ACTIONS
+
+        - search-people: Search for people based on skills, roles, companies, or other criteria
+        - search-companies: Search for companies based on industry, technology, or criteria
+        - deep-research: Get detailed information about a specific person or company
+        - add-to-board: Add a lead to a Jira board for tracking
+
+      conversationStarters:
+        - Find software engineers with AI/ML experience
+        - Search for Series A startups in the fintech space
+        - Find sales leaders at enterprise SaaS companies
+        - Research a specific company or person
+      actions:
+        - search-people
+        - search-companies
+        - deep-research
+        - add-to-board
+
+  # Rovo Actions - Functions the agent can invoke
+  action:
+    - key: search-people
+      name: Search for people
+      function: searchPeople
+      actionVerb: GET
+      description: >
+        Search for people (candidates, prospects, executives) based on skills,
+        roles,  locations, companies, or other criteria. Use this when the user
+        wants to find  individuals for recruiting or sales prospecting.
+      inputs:
+        query:
+          title: Search Query
+          type: string
+          required: true
+          description: >
+            The natural language search query describing the type of people to
+            find. Examples: "Senior React developers in San Francisco",
+            "Marketing executives at Fortune 500 companies"
+        numResults:
+          title: Number of Results
+          type: integer
+          required: false
+          description: >
+            The number of results to return. Defaults to 10 if not specified.
+
+    - key: search-companies
+      name: Search for companies
+      function: searchCompanies
+      actionVerb: GET
+      description: >
+        Search for companies based on industry, technology, size, funding
+        stage,  or other criteria. Use this when the user wants to find
+        companies for  sales prospecting or market research.
+      inputs:
+        query:
+          title: Search Query
+          type: string
+          required: true
+          description: >
+            The natural language search query describing the type of companies
+            to find. Examples: "AI startups with Series B funding", "Healthcare
+            SaaS companies"
+        numResults:
+          title: Number of Results
+          type: integer
+          required: false
+          description: >
+            The number of results to return. Defaults to 10 if not specified.
+
+    - key: deep-research
+      name: Deep research
+      function: deepResearch
+      actionVerb: GET
+      description: >
+        Perform deep research on a specific person or company to get
+        detailed  information, insights, and background. Use this when the user
+        wants  more details about a specific search result.
+      inputs:
+        query:
+          title: Research Query
+          type: string
+          required: true
+          description: >
+            The name or description of the person or company to research.
+        entityType:
+          title: Entity Type
+          type: string
+          required: true
+          description: >
+            The type of entity to research: "person" or "company"
+
+    - key: add-to-board
+      name: Add lead to Jira board
+      function: addToBoard
+      actionVerb: CREATE
+      description: >
+        Add a person or company as a lead to a Jira board for tracking and
+        follow-up. This creates a new Jira issue with the lead information.
+      inputs:
+        name:
+          title: Lead Name
+          type: string
+          required: true
+          description: >
+            The name of the person or company to add as a lead
+        entityType:
+          title: Entity Type
+          type: string
+          required: true
+          description: >
+            The type of lead: "person" or "company"
+        summary:
+          title: Summary
+          type: string
+          required: true
+          description: >
+            A brief summary or description of the lead
+        details:
+          title: Detailed Description
+          type: string
+          required: false
+          description: >
+            Detailed background information about the lead including
+            experience, skills, company info, etc. from Exa search results.
+        sourceUrl:
+          title: Source URL
+          type: string
+          required: false
+          description: >
+            The URL where this lead was found
+        projectKey:
+          title: Project Key
+          type: string
+          required: false
+          description: >
+            The Jira project key to add the issue to. If not provided, uses the
+            configured default.
+
+  # Jira Global Page - Dashboard and configuration UI
+  jira:globalPage:
+    - key: tofu-global-page
+      resource: tofu-frontend
+      resolver:
+        function: globalPageResolver
+      render: native
+      title: Tofu Dashboard
+
+  # Function handlers
+  function:
+    - key: searchPeople
+      handler: index.searchPeople
+    - key: searchCompanies
+      handler: index.searchCompanies
+    - key: deepResearch
+      handler: index.deepResearch
+    - key: addToBoard
+      handler: index.addToBoard
+    - key: globalPageResolver
+      handler: index.globalPageResolver
+
+# Frontend resources
+resources:
+  - key: tofu-frontend
+    path: src/frontend/index.tsx
+
+# App configuration
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/be6d3aaa-6ada-43d1-afc0-f36ff6431fce
+
+# Permissions for API access
+permissions:
+  scopes:
+    - storage:app
+    - read:jira-work
+    - write:jira-work
+    - read:board-scope:jira-software
+    - read:project:jira
+  external:
+    fetch:
+      backend:
+        - address: https://api.exa.ai
