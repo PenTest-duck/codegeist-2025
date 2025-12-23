@@ -156,6 +156,7 @@ interface ExaResearchCreateResponse {
 
 /**
  * Response from getting an Exa research task (completed)
+ * Note: output can be a string OR an object with a 'content' property
  */
 interface ExaResearchGetResponse {
   researchId: string;
@@ -164,11 +165,17 @@ interface ExaResearchGetResponse {
   instructions: string;
   createdAt: number;
   completedAt?: number;
-  output?: string;
+  finishedAt?: number;
+  output?: string | { content: string } | Record<string, unknown> | unknown[];
   sources?: Array<{
     url: string;
     title: string;
     snippet?: string;
+  }>;
+  citations?: Array<{
+    id: string;
+    url: string;
+    title: string;
   }>;
   error?: string;
 }
@@ -276,14 +283,59 @@ Provide specific details with citations where available.`;
       if (statusResponse.status === "completed") {
         // Research complete - return the output
         console.log(`[Exa] Research completed successfully!`);
+        console.log(
+          `[Exa] Output type: ${typeof statusResponse.output}, isArray: ${Array.isArray(
+            statusResponse.output
+          )}`
+        );
 
-        let result = statusResponse.output || "No research output available.";
+        // Handle various output formats - the API may return string, object with 'content', or other structures
+        let result: string;
+        if (typeof statusResponse.output === "string") {
+          result = statusResponse.output || "No research output available.";
+        } else if (
+          statusResponse.output &&
+          typeof statusResponse.output === "object" &&
+          !Array.isArray(statusResponse.output) &&
+          "content" in statusResponse.output &&
+          typeof (statusResponse.output as { content: unknown }).content ===
+            "string"
+        ) {
+          // Output is an object with a 'content' property (the actual structure from Exa)
+          result =
+            (statusResponse.output as { content: string }).content ||
+            "No research output available.";
+          console.log(
+            `[Exa] Extracted content from output object (length: ${result.length})`
+          );
+        } else if (statusResponse.output) {
+          // If output is an object or array without 'content', convert to formatted string
+          console.log(
+            `[Exa] Converting non-string output to string:`,
+            JSON.stringify(statusResponse.output).substring(0, 200)
+          );
+          result = JSON.stringify(statusResponse.output, null, 2);
+        } else {
+          result = "No research output available.";
+        }
 
-        // Add sources if available
-        if (statusResponse.sources && statusResponse.sources.length > 0) {
+        // Add citations or sources if available (Exa uses 'citations', but we support both)
+        if (statusResponse.citations && statusResponse.citations.length > 0) {
+          result += "\n\n**Sources:**\n";
+          statusResponse.citations.forEach((citation, index) => {
+            const url = citation.url || citation.id;
+            const title = citation.title || url || `Source ${index + 1}`;
+            result += `${index + 1}. [${title}](${url})\n`;
+          });
+        } else if (
+          statusResponse.sources &&
+          statusResponse.sources.length > 0
+        ) {
           result += "\n\n**Sources:**\n";
           statusResponse.sources.forEach((source, index) => {
-            result += `${index + 1}. [${source.title}](${source.url})\n`;
+            const url = source.url;
+            const title = source.title || url || `Source ${index + 1}`;
+            result += `${index + 1}. [${title}](${url})\n`;
           });
         }
 

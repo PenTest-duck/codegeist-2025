@@ -1,12 +1,13 @@
 /**
  * Deep Research Action
  *
- * This Rovo action performs detailed research on a specific person or company
- * using the Exa AI Research API. It provides comprehensive background information
- * with AI-synthesized insights and citations.
+ * This Rovo action queues detailed research on a specific person or company
+ * using the Exa AI Research API. The research is performed asynchronously
+ * to avoid the 25-second function timeout, and results are saved to Confluence.
  */
 
-import { deepResearch as exaDeepResearch } from "../exa/client";
+import { Queue } from "@forge/events";
+import { kvs } from "@forge/kvs";
 
 /**
  * Payload received from the Rovo agent
@@ -20,18 +21,24 @@ interface DeepResearchPayload {
   context?: {
     cloudId?: string;
     moduleKey?: string;
+    userAccess?: {
+      enabled?: boolean;
+      hasAccess?: boolean;
+    };
   };
+  /** Context token for authentication */
+  contextToken?: string;
 }
 
 /**
  * Main handler for the deep-research Rovo action.
  *
- * This function is invoked by the Rovo agent when a user wants detailed
- * information about a specific person or company. It uses Exa's Research API
- * to perform comprehensive research with AI-synthesized results and citations.
+ * This function queues the research task asynchronously to avoid timeout.
+ * The research will be performed in the background and a Confluence page
+ * will be created when complete. The user will be notified via showFlag.
  *
  * @param payload - The action payload containing the research query and entity type
- * @returns Formatted research results for the agent to display
+ * @returns Message indicating the research has been queued
  */
 export async function deepResearch(
   payload: DeepResearchPayload
@@ -44,7 +51,7 @@ export async function deepResearch(
     )}`
   );
 
-  const { query, entityType } = payload;
+  const { query, entityType, context } = payload;
 
   // Validate input
   if (!query || query.trim().length === 0) {
@@ -56,41 +63,72 @@ export async function deepResearch(
   }
 
   try {
-    // Perform deep research using Exa's Research API
-    // This returns a comprehensive, AI-synthesized research report
-    const researchOutput = await exaDeepResearch(query, entityType);
+    // Get context information
+    // Note: Rovo action context doesn't include accountId, so we use cloudId for tracking
+    const cloudId = context?.cloudId || "unknown";
 
-    // Check if we got meaningful results
-    if (
-      !researchOutput ||
-      researchOutput.includes("No detailed information found")
-    ) {
-      const entityLabel =
-        entityType === "person" ? "this person" : "this company";
-      return (
-        `I couldn't find detailed information about ${entityLabel}. Here are some suggestions:\n\n` +
-        "• Try using the full name\n" +
-        "• Include additional context (company name for people, industry for companies)\n" +
-        "• Check for spelling variations"
-      );
-    }
+    // Generate a user identifier for tracking (cloudId is sufficient for async processing)
+    const userId = cloudId;
 
-    // Add header and follow-up suggestions
+    // Get configured default space key if available
+    const config = (await kvs.get("tofu-config")) as {
+      defaultConfluenceSpace?: string;
+    } | null;
+    const defaultSpaceKey = config?.defaultConfluenceSpace;
+
+    // Create async event queue
+    const queue = new Queue({ key: "deep-research-queue" });
+
+    // Generate a unique research ID for tracking
+    const researchId = `research-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // Push the research task to the queue
+    const { jobId } = await queue.push({
+      body: {
+        query,
+        entityType,
+        userId,
+        cloudId,
+        spaceKey: defaultSpaceKey,
+        researchId, // Unique ID for tracking this research
+      },
+    });
+
+    console.log(
+      `[DeepResearch] Research queued with job ID: ${jobId}, research ID: ${researchId}`
+    );
+
+    // Store the mapping for later retrieval
+    await kvs.set(`research-job-${researchId}`, {
+      query,
+      entityType,
+      userId,
+      cloudId,
+      jobId,
+      status: "queued",
+      createdAt: new Date().toISOString(),
+    });
+
     const emoji = entityType === "person" ? "👤" : "🏢";
-    const header = `${emoji} **Deep Research: ${query}**\n\n`;
-
-    const followUp =
-      entityType === "person"
-        ? '\n\n💡 **Next steps:**\n• Say "add this person to board" to track them in Jira\n• Ask me to search for similar people\n• Ask about their company for more context'
-        : '\n\n💡 **Next steps:**\n• Say "add this company to board" to track them in Jira\n• Ask me to find people at this company\n• Search for similar companies in the same space';
-
-    return header + researchOutput + followUp;
+    return (
+      `${emoji} **Deep Research Queued**\n\nI've started researching **${query}**. This may take 30-60 seconds.\n\n` +
+      `The research results will be saved to a Confluence page${
+        defaultSpaceKey ? ` in the ${defaultSpaceKey} space` : ""
+      } and you'll be notified when it's complete.\n\n` +
+      `💡 **What happens next:**\n` +
+      `• Research is being performed in the background\n` +
+      `• A Confluence page will be created with comprehensive findings\n` +
+      `• You'll receive a notification when it's ready\n\n` +
+      `You can continue using Tofu while the research completes. The research ID is: \`${researchId}\` (you can use this to check status).`
+    );
   } catch (error) {
-    console.error("[DeepResearch] Error during research:", error);
+    console.error("[DeepResearch] Error queueing research:", error);
 
     // Return a user-friendly error message
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    return `Sorry, I encountered an error while researching: ${errorMessage}\n\nPlease try again with a different query.`;
+    return `Sorry, I encountered an error while queueing the research: ${errorMessage}\n\nPlease try again with a different query.`;
   }
 }

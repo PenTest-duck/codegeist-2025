@@ -14,6 +14,9 @@ importers:
       '@forge/bridge':
         specifier: ^5.10.1
         version: 5.10.1(@types/react@18.3.27)(react@19.2.3)
+      '@forge/events':
+        specifier: ^2.0.14
+        version: 2.0.14
       '@forge/kvs':
         specifier: ^1.2.4
         version: 1.2.4
@@ -539,6 +542,9 @@ packages:
 
   '@forge/egress@2.3.1':
     resolution: {integrity: sha512-NoqQsoPj98F8yBJyUUy72PEdcqvJo7upGWTllZ6RN3ZAxvmq2jnCrJ+ipVBYqTIHJLhKNc2PKxRpBls7NQA20A==}
+
+  '@forge/events@2.0.14':
+    resolution: {integrity: sha512-//reNqvIXi3dwn42R+XYqCrTuifTsHovE4K8zJmTvJrRZA+6OaWbnYOj33tkfQJsaEbC3c8LtAU/dEzXKSlBHQ==}
 
   '@forge/i18n@0.0.7':
     resolution: {integrity: sha512-EKrQApcuI4k4AkUSeERkZv1dQaGjWsmB8i7ciDPtpDARPRH1sOrU+FSEOoA7b9FQ15++7Q144m94w/aMLCg5Gg==}
@@ -2965,6 +2971,11 @@ snapshots:
       - supports-color
 
   '@forge/egress@2.3.1': {}
+
+  '@forge/events@2.0.14':
+    dependencies:
+      '@forge/api': 6.4.2
+      uuid: 9.0.1
 
   '@forge/i18n@0.0.7':
     dependencies:

@@ -15,5 +15,11 @@ export { searchCompanies } from "./backend/actions/searchCompanies";
 export { deepResearch } from "./backend/actions/deepResearch";
 export { addToBoard } from "./backend/actions/addToBoard";
 
+// Export Jira issue action resolver
+export { deepResearchResolver } from "./backend/actions/issueDeepResearch";
+
 // Export global page resolver
 export { globalPageResolver } from "./backend/resolver";
+
+// Export async event consumer
+export { handler as deepResearchConsumer } from "./backend/consumers/deepResearchConsumer";

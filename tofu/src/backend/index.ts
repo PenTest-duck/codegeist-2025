@@ -13,3 +13,6 @@ export { addToBoard } from "./actions/addToBoard";
 
 // Export global page resolver
 export { globalPageResolver } from "./resolver";
+
+// Export async event consumer
+export { handler as deepResearchConsumer } from "./consumers/deepResearchConsumer";

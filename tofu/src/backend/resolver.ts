@@ -8,6 +8,7 @@
 import Resolver from '@forge/resolver';
 import { kvs } from '@forge/kvs';
 import { getProjects, getBoards } from './jira/issues';
+import { getSpaces } from './confluence/pages';
 import type {
   TofuConfig,
   DashboardStats,
@@ -301,6 +302,140 @@ resolver.define('getJiraBoards', async (): Promise<Array<{ id: number; name: str
     return await getBoards();
   } catch (error) {
     console.error('[Resolver] Error getting Jira boards:', error);
+    return [];
+  }
+});
+
+// ============================================================================
+// Confluence Space Configuration
+// ============================================================================
+
+/**
+ * Get available Confluence spaces for configuration.
+ */
+resolver.define('getConfluenceSpaces', async (): Promise<Array<{ key: string; name: string; id: string }>> => {
+  console.log('[Resolver] getConfluenceSpaces called');
+  
+  try {
+    const spaces = await getSpaces();
+    return spaces.map(s => ({ key: s.key, name: s.name, id: s.id }));
+  } catch (error) {
+    console.error('[Resolver] Error getting Confluence spaces:', error);
+    return [];
+  }
+});
+
+/**
+ * Get the configured default Confluence space.
+ */
+resolver.define('getDefaultConfluenceSpace', async (): Promise<{ key: string; name: string } | null> => {
+  console.log('[Resolver] getDefaultConfluenceSpace called');
+  
+  try {
+    const config = await kvs.get('tofu-config') as TofuConfig | undefined;
+    if (config?.defaultConfluenceSpace) {
+      const spaces = await getSpaces();
+      const space = spaces.find(s => s.key === config.defaultConfluenceSpace);
+      if (space) {
+        return { key: space.key, name: space.name };
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('[Resolver] Error getting default Confluence space:', error);
+    return null;
+  }
+});
+
+/**
+ * Set the default Confluence space for research pages.
+ */
+resolver.define('setDefaultConfluenceSpace', async ({ payload }): Promise<{ success: boolean }> => {
+  console.log('[Resolver] setDefaultConfluenceSpace called');
+  
+  const { spaceKey } = payload || {};
+  
+  if (!spaceKey) {
+    return { success: false };
+  }
+  
+  try {
+    const config = (await kvs.get('tofu-config') as TofuConfig | undefined) || {
+      defaultResultCount: 10,
+      autoSaveResults: true,
+    };
+    
+    await kvs.set('tofu-config', {
+      ...config,
+      defaultConfluenceSpace: spaceKey,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Resolver] Error setting default Confluence space:', error);
+    return { success: false };
+  }
+});
+
+/**
+ * Get research result by research ID (for notifications).
+ */
+resolver.define('getResearchResult', async ({ payload }): Promise<{
+  success: boolean;
+  query?: string;
+  entityType?: string;
+  pageUrl?: string;
+  pageTitle?: string;
+  error?: string;
+  completedAt?: string;
+} | null> => {
+  console.log('[Resolver] getResearchResult called');
+  
+  const { researchId } = payload || {};
+  
+  if (!researchId) {
+    return null;
+  }
+  
+  try {
+    const result = await kvs.get(`research-result-${researchId}`) as {
+      success: boolean;
+      query: string;
+      entityType: string;
+      pageUrl?: string;
+      pageTitle?: string;
+      error?: string;
+      completedAt: string;
+    } | null;
+    
+    return result || null;
+  } catch (error) {
+    console.error('[Resolver] Error getting research result:', error);
+    return null;
+  }
+});
+
+/**
+ * Get all pending research jobs for the current user.
+ */
+resolver.define('getPendingResearch', async (): Promise<Array<{
+  researchId: string;
+  query: string;
+  entityType: string;
+  status: string;
+  createdAt: string;
+  pageUrl?: string;
+  pageTitle?: string;
+}>> => {
+  console.log('[Resolver] getPendingResearch called');
+  
+  try {
+    // Note: This is a simplified version. In production, you'd want to
+    // maintain a list of research IDs per user for efficient querying.
+    // For now, we'll return an empty array and rely on researchId lookups.
+    return [];
+  } catch (error) {
+    console.error('[Resolver] Error getting pending research:', error);
     return [];
   }
 });

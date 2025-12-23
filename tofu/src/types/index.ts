@@ -178,6 +178,8 @@ export interface TofuConfig {
   defaultProjectKey?: string;
   /** Default issue type for leads */
   defaultIssueType?: string;
+  /** Default Confluence space key for research pages */
+  defaultConfluenceSpace?: string;
   /** Number of results to fetch by default */
   defaultResultCount: number;
   /** Whether to auto-save search results */

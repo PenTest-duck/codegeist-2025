@@ -188,6 +188,18 @@ modules:
       render: native
       title: Tofu Dashboard
 
+  # Jira Issue Action - Deep Research button on lead issues
+  jira:issueAction:
+    - key: deep-research-action
+      title: 🔍 Deep Research
+      resource: deep-research-ui
+      render: native
+      resolver:
+        function: deepResearchResolver
+      description: >
+        Perform deep research on this lead and create a Confluence page
+        with comprehensive background information.
+
   # Function handlers
   function:
     - key: searchPeople
@@ -200,11 +212,24 @@ modules:
       handler: index.addToBoard
     - key: globalPageResolver
       handler: index.globalPageResolver
+    - key: deepResearchResolver
+      handler: index.deepResearchResolver
+    - key: deepResearchConsumer
+      handler: index.deepResearchConsumer
+      timeoutSeconds: 600
+
+  # Async event consumers
+  consumer:
+    - key: deep-research-consumer
+      queue: deep-research-queue
+      function: deepResearchConsumer
 
 # Frontend resources
 resources:
   - key: tofu-frontend
     path: src/frontend/index.tsx
+  - key: deep-research-ui
+    path: src/frontend/deepResearch.tsx
 
 # App configuration
 app:
@@ -218,10 +243,14 @@ app:
 permissions:
   scopes:
     - storage:app
+    # Jira permissions
     - read:jira-work
     - write:jira-work
     - read:board-scope:jira-software
     - read:project:jira
+    # Confluence permissions for creating research pages
+    - read:space:confluence
+    - write:page:confluence
   external:
     fetch:
       backend:
